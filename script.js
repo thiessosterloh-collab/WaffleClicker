@@ -1,0 +1,235 @@
+// === WAFFLE CLICKER GAME ===
+
+let waffles = 0;
+let totalWaffles = 0;
+let wafflesPerClick = 1;
+let wafflesPerSecond = 0;
+
+// --- SHOP ITEMS ---
+const shopItems = [
+  { id: 'grandma',   name: '👵 Waffel-Oma',       desc: 'Backt Waffeln mit Liebe',        baseCost: 15,   wps: 0.1,  count: 0 },
+  { id: 'oven',      name: '🔥 Waffelofen',        desc: 'Produziert Waffeln automatisch', baseCost: 100,  wps: 0.5,  count: 0 },
+  { id: 'factory',   name: '🏭 Waffelfabrik',      desc: 'Massenfertigung von Waffeln',    baseCost: 500,  wps: 2,    count: 0 },
+  { id: 'farm',      name: '🌾 Waffelfarm',        desc: 'Anbau von Waffelzutaten',        baseCost: 2000, wps: 8,    count: 0 },
+  { id: 'lab',       name: '🔬 Waffellabor',       desc: 'Wissenschaftliche Waffeln',      baseCost: 8000, wps: 25,   count: 0 },
+  { id: 'portal',    name: '🌀 Waffelportal',      desc: 'Aus anderen Dimensionen',        baseCost: 30000,wps: 80,   count: 0 },
+];
+
+// --- UPGRADES ---
+const upgrades = [
+  { id: 'better_click',  name: '🧇 Doppelklick',       desc: '+1 Waffel pro Klick',       cost: 50,    bought: false, effect: () => { wafflesPerClick += 1; } },
+  { id: 'golden_fork',   name: '🍴 Goldene Gabel',      desc: '+3 Waffeln pro Klick',      cost: 200,   bought: false, effect: () => { wafflesPerClick += 3; } },
+  { id: 'syrup',         name: '🍯 Ahornsirup',         desc: 'Alle Gebäude x1.5',         cost: 500,   bought: false, effect: () => { applyMultiplier(1.5); } },
+  { id: 'crispy',        name: '✨ Knusprig Upgrade',   desc: '+10 Waffeln pro Klick',     cost: 1000,  bought: false, effect: () => { wafflesPerClick += 10; } },
+  { id: 'mega_oven',     name: '🔥 Mega-Ofen',          desc: 'Alle Gebäude x2',           cost: 5000,  bought: false, effect: () => { applyMultiplier(2); } },
+  { id: 'wafflium',      name: '💎 Wafflium',           desc: '+50 Waffeln pro Klick',     cost: 20000, bought: false, effect: () => { wafflesPerClick += 50; } },
+];
+
+// --- MILESTONES ---
+const milestones = [
+  { id: 'm1',  icon: '🥉', name: '1. Waffel',      goal: 1,       achieved: false },
+  { id: 'm2',  icon: '🍽️', name: '100 Waffeln',   goal: 100,     achieved: false },
+  { id: 'm3',  icon: '🥞', name: '1.000 Waffeln',  goal: 1000,    achieved: false },
+  { id: 'm4',  icon: '🧇', name: '10.000 Waffeln', goal: 10000,   achieved: false },
+  { id: 'm5',  icon: '🏆', name: '100k Waffeln',   goal: 100000,  achieved: false },
+  { id: 'm6',  icon: '👑', name: '1 Mio Waffeln',  goal: 1000000, achieved: false },
+];
+
+function applyMultiplier(mult) {
+  shopItems.forEach(item => { item.wps *= mult; });
+  recalcWPS();
+}
+
+function recalcWPS() {
+  wafflesPerSecond = shopItems.reduce((sum, item) => sum + item.wps * item.count, 0);
+}
+
+function getCost(item) {
+  return Math.floor(item.baseCost * Math.pow(1.15, item.count));
+}
+
+function formatNum(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + ' Mrd';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + ' Mio';
+  if (n >= 1e3) return (n / 1e3).toFixed(2) + 'k';
+  return Math.floor(n).toString();
+}
+
+// --- UI RENDERING ---
+function renderShop() {
+  const list = document.getElementById('shop-list');
+  list.innerHTML = '';
+  shopItems.forEach(item => {
+    const cost = getCost(item);
+    const canAfford = waffles >= cost;
+    const div = document.createElement('div');
+    div.className = 'shop-item' + (canAfford ? '' : ' disabled');
+    div.innerHTML = `
+      <div class="shop-item-header">
+        <span class="shop-item-name">${item.name}</span>
+        <span class="shop-item-count">${item.count}</span>
+      </div>
+      <div class="shop-item-desc">${item.desc} (+${item.wps} 🧇/s)</div>
+      <div class="shop-item-cost">🧇 ${formatNum(cost)}</div>
+    `;
+    div.addEventListener('click', () => buyShopItem(item));
+    list.appendChild(div);
+  });
+}
+
+function renderUpgrades() {
+  const list = document.getElementById('upgrades-list');
+  list.innerHTML = '';
+  upgrades.forEach(upg => {
+    const canAfford = waffles >= upg.cost;
+    const btn = document.createElement('button');
+    btn.className = 'upgrade-btn' + (upg.bought ? ' bought' : '');
+    btn.disabled = upg.bought || !canAfford;
+    btn.innerHTML = `
+      <span class="upgrade-icon">${upg.bought ? '✅' : '⬆️'}</span>
+      <div class="upgrade-info">
+        <div class="upgrade-name">${upg.name}</div>
+        <div class="upgrade-desc">${upg.desc}</div>
+      </div>
+      <span class="upgrade-cost">${upg.bought ? 'Gekauft' : '🧇 ' + formatNum(upg.cost)}</span>
+    `;
+    btn.addEventListener('click', () => buyUpgrade(upg));
+    list.appendChild(btn);
+  });
+}
+
+function renderMilestones() {
+  const list = document.getElementById('milestone-list');
+  list.innerHTML = '';
+  milestones.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'milestone' + (m.achieved ? ' achieved' : '');
+    div.innerHTML = `<span class="milestone-icon">${m.icon}</span>${m.name}`;
+    list.appendChild(div);
+  });
+}
+
+function updateStats() {
+  document.getElementById('waffle-count').textContent = formatNum(waffles);
+  document.getElementById('wps').textContent = formatNum(wafflesPerSecond);
+  document.getElementById('wpc').textContent = formatNum(wafflesPerClick);
+}
+
+// --- ACTIONS ---
+function buyShopItem(item) {
+  const cost = getCost(item);
+  if (waffles < cost) return;
+  waffles -= cost;
+  item.count++;
+  recalcWPS();
+  renderShop();
+  renderUpgrades();
+  updateStats();
+  showToast(item.name + ' gekauft!');
+}
+
+function buyUpgrade(upg) {
+  if (upg.bought || waffles < upg.cost) return;
+  waffles -= upg.cost;
+  upg.bought = true;
+  upg.effect();
+  renderUpgrades();
+  renderShop();
+  updateStats();
+  showToast(upg.name + ' aktiviert!');
+}
+
+function checkMilestones() {
+  milestones.forEach(m => {
+    if (!m.achieved && totalWaffles >= m.goal) {
+      m.achieved = true;
+      renderMilestones();
+      showToast('🏆 Meilenstein: ' + m.name + '!');
+    }
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// --- CLICK HANDLER ---
+document.getElementById('waffle-btn').addEventListener('click', function(e) {
+  waffles += wafflesPerClick;
+  totalWaffles += wafflesPerClick;
+
+  // Pop animation
+  const feedback = document.getElementById('click-feedback');
+  const pop = document.createElement('span');
+  pop.className = 'click-pop';
+  pop.textContent = '+' + formatNum(wafflesPerClick) + ' 🧇';
+  pop.style.left = (Math.random() * 80 - 40) + 'px';
+  pop.style.top = (Math.random() * 20 - 60) + 'px';
+  feedback.appendChild(pop);
+  setTimeout(() => pop.remove(), 1000);
+
+  checkMilestones();
+  updateStats();
+  renderShop();
+  renderUpgrades();
+});
+
+// --- GAME LOOP ---
+setInterval(() => {
+  const gain = wafflesPerSecond / 20;
+  waffles += gain;
+  totalWaffles += gain;
+  updateStats();
+  checkMilestones();
+
+  // Re-render shop every second (cheaper)
+}, 50);
+
+setInterval(() => {
+  renderShop();
+  renderUpgrades();
+}, 1000);
+
+// --- SAVE / LOAD ---
+function saveGame() {
+  const state = {
+    waffles, totalWaffles, wafflesPerClick,
+    shopCounts: shopItems.map(i => i.count),
+    shopWps: shopItems.map(i => i.wps),
+    upgradesBought: upgrades.map(u => u.bought),
+    milestonesAchieved: milestones.map(m => m.achieved),
+  };
+  localStorage.setItem('waffleClicker', JSON.stringify(state));
+}
+
+function loadGame() {
+  const raw = localStorage.getItem('waffleClicker');
+  if (!raw) return;
+  try {
+    const s = JSON.parse(raw);
+    waffles = s.waffles || 0;
+    totalWaffles = s.totalWaffles || 0;
+    wafflesPerClick = s.wafflesPerClick || 1;
+    s.shopCounts.forEach((c, i) => { shopItems[i].count = c; });
+    s.shopWps.forEach((w, i) => { shopItems[i].wps = w; });
+    s.upgradesBought.forEach((b, i) => {
+      if (b && !upgrades[i].bought) {
+        upgrades[i].bought = true;
+      }
+    });
+    s.milestonesAchieved.forEach((a, i) => { milestones[i].achieved = a; });
+    recalcWPS();
+  } catch(e) { console.log('Save load error', e); }
+}
+
+setInterval(saveGame, 5000);
+
+// --- INIT ---
+loadGame();
+renderShop();
+renderUpgrades();
+renderMilestones();
+updateStats();

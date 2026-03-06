@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🧇 WaffleClicker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>🧇 WaffleClicker</h1>
+      <p class="subtitle">Klicke auf die Waffel und werde zum Waffel-König!</p>
+    </header>
+
+    <div id="main">
+      <div id="left-panel">
+        <div id="stats">
+          <div class="stat-box">
+            <span class="stat-label">🧇 Waffeln</span>
+            <span class="stat-value" id="waffle-count">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">⚡ pro Sekunde</span>
+            <span class="stat-value" id="wps">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">👆 pro Klick</span>
+            <span class="stat-value" id="wpc">1</span>
+          </div>
+        </div>
+
+        <div id="clicker-area">
+          <div id="waffle-btn">🧇</div>
+          <div id="click-feedback"></div>
+        </div>
+
+        <div id="upgrades-section">
+          <h2>⬆️ Upgrades</h2>
+          <div id="upgrades-list"></div>
+        </div>
+      </div>
+
+      <div id="right-panel">
+        <h2>🏪 Shop</h2>
+        <div id="shop-list"></div>
+      </div>
+    </div>
+
+    <div id="milestones">
+      <h2>🏆 Meilensteine</h2>
+      <div id="milestone-list"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
